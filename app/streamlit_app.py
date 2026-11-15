@@ -156,3 +156,6 @@ st.divider()
 st.caption(
     "Smart Fake News Detection System | Python, NLP and Machine Learning"
 )
+st.write("Logistic Regression Classes:", logistic_model.classes_)
+st.write("Naive Bayes Classes:", naive_bayes_model.classes_)
+st.write("TF-IDF Features:", len(tfidf.get_feature_names_out()))
