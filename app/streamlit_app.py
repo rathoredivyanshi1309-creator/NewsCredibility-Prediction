@@ -4,22 +4,42 @@ import joblib
 import re
 import os
 
-# Find the main project folder
+# Project directories
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 MODEL_DIR = os.path.join(BASE_DIR, "models")
 
-# Load saved models and vectorizer
-logistic_model = joblib.load(
-    os.path.join(MODEL_DIR, "logistic_regression_model.joblib")
+# Page configuration
+st.set_page_config(
+    page_title="Smart Fake News Detection",
+    page_icon="📰",
+    layout="centered"
 )
 
-naive_bayes_model = joblib.load(
-    os.path.join(MODEL_DIR, "naive_bayes_model.joblib")
-)
+# Load trained models and TF-IDF vectorizer
+@st.cache_resource
+def load_models():
+    logistic_model = joblib.load(
+        os.path.join(MODEL_DIR, "logistic_regression_model.joblib")
+    )
 
-tfidf = joblib.load(
-    os.path.join(MODEL_DIR, "tfidf_vectorizer.joblib")
-)
+    naive_bayes_model = joblib.load(
+        os.path.join(MODEL_DIR, "naive_bayes_model.joblib")
+    )
+
+    tfidf = joblib.load(
+        os.path.join(MODEL_DIR, "tfidf_vectorizer.joblib")
+    )
+
+    return logistic_model, naive_bayes_model, tfidf
+
+
+try:
+    logistic_model, naive_bayes_model, tfidf = load_models()
+except Exception as e:
+    st.error("Unable to load the trained models.")
+    st.exception(e)
+    st.stop()
+
 
 # Text preprocessing function
 def clean_text(text):
@@ -30,13 +50,8 @@ def clean_text(text):
     text = re.sub(r'\s+', ' ', text)
     return text.strip()
 
-# Application heading
-st.set_page_config(
-    page_title="Smart Fake News Detection",
-    page_icon="📰",
-    layout="centered"
-)
 
+# Application heading
 st.title("📰 Smart Fake News Detection System")
 
 st.write(
@@ -80,19 +95,54 @@ if st.button("Detect News Category"):
 
         transformed_text = tfidf.transform([content])
 
+        # Select model
         if model_choice == "Logistic Regression":
-            prediction = logistic_model.predict(transformed_text)[0]
-
+            selected_model = logistic_model
         else:
-            prediction = naive_bayes_model.predict(transformed_text)[0]
+            selected_model = naive_bayes_model
+
+        # Generate prediction
+        prediction = selected_model.predict(transformed_text)[0]
 
         st.subheader("Prediction Result")
 
-        if prediction == "Fake":
+        if str(prediction).strip().lower() == "fake":
             st.error("The model classified this news as: FAKE")
+        elif str(prediction).strip().lower() == "real":
+            st.success("The model classified this news as: REAL")
+        else:
+            st.write(f"Predicted class: {prediction}")
+
+        # Display model probability estimates
+        if hasattr(selected_model, "predict_proba"):
+
+            probabilities = selected_model.predict_proba(
+                transformed_text
+            )[0]
+
+            classes = selected_model.classes_
+
+            st.subheader("Model Probability Estimates")
+
+            for class_name, probability in zip(classes, probabilities):
+
+                percentage = float(probability) * 100
+
+                st.write(
+                    f"**{class_name}: {percentage:.2f}%**"
+                )
+
+                st.progress(float(probability))
+
+            st.caption(
+                "These percentages are model probability estimates, "
+                "not verified measures of factual accuracy."
+            )
 
         else:
-            st.success("The model classified this news as: REAL")
+            st.warning(
+                "Probability estimates are not available for this model."
+            )
 
         st.caption(
             "This is a machine-learning prediction, not confirmation "
@@ -101,4 +151,6 @@ if st.button("Detect News Category"):
 
 st.divider()
 
-st.caption("Smart Fake News Detection System | Python, NLP and Machine Learning")
+st.caption(
+    "Smart Fake News Detection System | Python, NLP and Machine Learning"
+)
