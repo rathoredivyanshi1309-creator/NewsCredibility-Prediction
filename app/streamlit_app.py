@@ -50,7 +50,9 @@ def clean_text(text):
     text = re.sub(r'\s+', ' ', text)
     return text.strip()
 
-
+st.write("Logistic Regression Classes:", logistic_model.classes_)
+st.write("Naive Bayes Classes:", naive_bayes_model.classes_)
+st.write("TF-IDF Features:", len(tfidf.get_feature_names_out()))
 # Application heading
 st.title("📰 Smart Fake News Detection System")
 
